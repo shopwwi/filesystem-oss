@@ -1,6 +1,6 @@
 #安装
 ```
-composer require shopwwi/flysystem-oss
+composer require shopwwi/filesystem-oss
 ```
 #感谢
 ```
