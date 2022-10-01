@@ -73,6 +73,11 @@ class OssAdapter implements FilesystemAdapter
         $this->client->setConnectTimeout($connectTimeout);
     }
 
+    public function directoryExists(string $path): bool
+    {
+        return $this->client->doesObjectExist($this->bucket, $path);
+    }
+
     public function fileExists(string $path): bool
     {
         return $this->client->doesObjectExist($this->bucket, $path);
@@ -108,15 +113,24 @@ class OssAdapter implements FilesystemAdapter
 
     public function readStream(string $path)
     {
-        try {
-            $stream = fopen('php://temp', 'w+b');
-            fwrite($stream, $this->read($path));
-            rewind($stream);
-        } catch (OssException $exception) {
-            return false;
+        $body = $this->read($path);
+        $resource = fopen('php://temp', 'r+');
+        if ($body !== '') {
+            fwrite($resource, $body);
+            fseek($resource, 0);
         }
 
-        return compact('stream', 'path');
+        return $resource;
+
+   //     try {
+   //         $stream = fopen('php://temp', 'w+b');
+   //         fwrite($stream, $this->read($path));
+   //         rewind($stream);
+   //     } catch (OssException $exception) {
+   //         return false;
+  //      }
+
+   //    return compact('stream', 'path');
     }
 
     public function delete(string $path): void
@@ -171,8 +185,12 @@ class OssAdapter implements FilesystemAdapter
 
     public function fileSize(string $path): FileAttributes
     {
-        $response = $this->client->getObjectMeta($this->bucket, $path);
-        return new FileAttributes($path, $response['content-length']);
+	$response = $this->client->getObjectMeta($this->bucket, $path);
+	$fileSize = null;
+	if (isset($response['content-length'])) {
+		$fileSize = (int) $response['content-length'];
+	}
+	return new FileAttributes($path, $fileSize);
     }
 
     public function listContents(string $path, bool $deep): iterable
